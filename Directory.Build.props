@@ -1,0 +1,11 @@
+<Project>
+
+	<PropertyGroup>
+		<ModName>Wealth Overlay</ModName>
+		<ModFileName>WealthOverlay</ModFileName>
+		<Repository>https://github.com/pardeike/CameraPlus</Repository>
+		<ModVersion>1.0.0.0</ModVersion>
+		<ProjectGuid>f9189491-0e85-45e5-b4f2-0d66e0aa5bc7</ProjectGuid>
+	</PropertyGroup>
+
+</Project>
