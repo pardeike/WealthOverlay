@@ -1,3 +1,4 @@
+using Brrainz;
 using HarmonyLib;
 using UnityEngine;
 using Verse;
@@ -14,6 +15,8 @@ namespace WealthOverlay
 
 			var harmony = new Harmony("brrainz.wealthoverlay");
 			harmony.PatchAll();
+
+			CrossPromotion.Install(76561197973010050);
 		}
 
 		public override void DoSettingsWindowContents(Rect inRect) => Settings.DoWindowContents(inRect);
