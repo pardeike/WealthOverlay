@@ -16,47 +16,12 @@ namespace WealthOverlay
 		}
 	}
 
-	public class Wealth : MapComponent, ICellBoolGiver
+	public class Wealth(Map map) : MapComponent(map), IZoomGridBoolGiver
 	{
-		private int zoom = 1;
+		private int zoom = 1, xSize, zSize;
+		private float cellMax = 0;
 		private float[] wealthGrid;
-		private readonly ZoomGridDrawer drawer;
-
-		public Wealth(Map map) : base(map)
-		{
-			drawer = new ZoomGridDrawer(this, map.Size.x, map.Size.z, 0.5f);
-			Reset();
-		}
-
-		public void Reset() => Zoom = zoom;
-
-		public void Register(float marketValue, Thing thing)
-		{
-			var index = map.cellIndices.CellToIndex(thing.PositionHeld);
-			wealthGrid[index] += marketValue;
-			drawer.SetDirty();
-		}
-
-		public void Register(float marketValue, Pawn pawn)
-		{
-			var index = map.cellIndices.CellToIndex(pawn.PositionHeld);
-			wealthGrid[index] += marketValue;
-			drawer.SetDirty();
-		}
-
-		public void Register(float marketValue, int index)
-		{
-			wealthGrid[index] += marketValue;
-			drawer.SetDirty();
-		}
-
-		public void UpdateDrawer()
-		{
-			drawer.MarkForDraw(); // use to turn drawing on/off
-			drawer.ZoomGridDrawerUpdate();
-		}
-
-		public float TotalWealth => wealthGrid.Sum();
+		private ZoomGridDrawer drawer;
 
 		public int Zoom
 		{
@@ -64,16 +29,61 @@ namespace WealthOverlay
 			set
 			{
 				zoom = value;
-				wealthGrid = new float[map.Size.x * map.Size.z / zoom / zoom];
-				drawer.SetDirty();
+				Log.Warning("Zoom: " + zoom);
+				Reset();
+				map.wealthWatcher.ForceRecount(true);
 			}
 		}
 
+		public void Reset()
+		{
+			xSize = map.Size.x / zoom + 1;
+			zSize = map.Size.z / zoom + 1;
+			wealthGrid = new float[xSize * zSize];
+			drawer?.Cleanup();
+			drawer = new ZoomGridDrawer(this, xSize, zSize, zoom, 0.9f);
+			drawer.SetDirty();
+		}
+
+		public int CellToIndex(IntVec3 cell) => (cell.z / zoom) * xSize + (cell.x / zoom);
+
+		public void Register(float marketValue, Thing thing)
+		{
+			var idx = CellToIndex(thing.PositionHeld);
+			wealthGrid[idx] += marketValue;
+			drawer.SetDirty();
+		}
+
+		public void Register(float marketValue, Pawn pawn)
+		{
+			var idx = CellToIndex(pawn.PositionHeld);
+			wealthGrid[idx] += marketValue;
+			drawer.SetDirty();
+		}
+
+		public void Register(float marketValue, int index)
+		{
+			var idx = CellToIndex(map.cellIndices.IndexToCell(index));
+			wealthGrid[idx] += marketValue;
+			drawer.SetDirty();
+		}
+
+		public void UpdateDrawer()
+		{
+			drawer.MarkForDraw();
+			cellMax = MaxCellWealth;
+			drawer.ZoomGridDrawerUpdate();
+		}
+
+		public float TotalWealth => wealthGrid.Sum();
+
+		public float MaxCellWealth => wealthGrid.Max();
+
 		public Color Color => Color.yellow;
 
-		public bool GetCellBool(int index) => wealthGrid[index] > 0;
+		public bool GetCellBool(int x, int z) => cellMax > 0 && wealthGrid[z * xSize + x] > 0;
 
-		public Color GetCellExtraColor(int _) => Color.yellow;
+		public Color GetCellExtraColor(int x, int z) => Color.yellow.ToTransparent(wealthGrid[z * xSize + x] / cellMax);
 
 		public override void ExposeData()
 		{

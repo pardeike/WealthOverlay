@@ -2,10 +2,38 @@
 using RimWorld;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using UnityEngine;
 using Verse;
 
 namespace WealthOverlay
 {
+	[HarmonyPatch(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI))]
+	public static class UIRoot_Play_UIRootOnGUI_Patch
+	{
+		public static void Prefix()
+		{
+			if (Find.CurrentMap == null)
+				return;
+
+			if (Event.current.isKey && Event.current.type == EventType.KeyDown)
+			{
+				var wealth = Find.CurrentMap.GetComponent<Wealth>();
+				if (Event.current.keyCode == KeyCode.LeftBracket)
+				{
+					if (wealth.Zoom > 1)
+						wealth.Zoom--;
+					Event.current.Use();
+				}
+				if (Event.current.keyCode == KeyCode.RightBracket)
+				{
+					wealth.Zoom++;
+					Event.current.Use();
+				}
+			}
+		}
+
+	}
+
 	[HarmonyPatch(typeof(WealthWatcher), nameof(WealthWatcher.ForceRecount))]
 	public static class WealthWatcher_ForceRecount_Patch
 	{
@@ -36,7 +64,7 @@ namespace WealthOverlay
 			var mGetStatValue = SymbolExtensions.GetMethodInfo(() => StatExtension.GetStatValue(default, default, default, default));
 			var mGetIsSlave = AccessTools.PropertyGetter(typeof(Pawn), nameof(Pawn.IsSlave));
 			var mRegisterThing = SymbolExtensions.GetMethodInfo(() => Register(default, (Thing)default, default));
-			var mRegisterPawn = SymbolExtensions.GetMethodInfo(() => Register(default, (Pawn)default, default));
+			var mRegisterPawn = SymbolExtensions.GetMethodInfo(() => Register(default, default, default));
 			var fWealthPawns = AccessTools.Field(typeof(WealthWatcher), nameof(WealthWatcher.wealthPawns));
 			return new CodeMatcher(instructions)
 				.Advance(1)
